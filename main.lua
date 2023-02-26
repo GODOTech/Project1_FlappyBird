@@ -7,6 +7,8 @@ Class = require 'class'
 --la clase del pajaro
 require 'Bird'
 
+require 'Pipe'
+
 -- dimensiones de la pantalla fisica
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -31,6 +33,12 @@ local BACKGROUND_LOOPING_POINT = 413
 
 --The Bird is the word!
 local bird = Bird()
+
+--nuestra tabla de brotar tubos
+local pipes = {}
+
+--nuestro timer para hacer aparecer los tubos
+local spawnTimer = 0
 
 function love.load()
     --iniciar el filtro de vecino cercano
@@ -84,8 +92,27 @@ function love.update(dt)
     --panear el suelo por la velocidad * dt, bucleando a 0 despues de el ancho de pantalla
     groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt)
         % VIRTUAL_WIDTH
+    
+    spawnTimer = spawnTimer + dt
+
+    --hacer aparecer un nuevo tubo si el timer se pasa de 2 segundos
+    if spawnTimer > 2 then
+        table.insert(pipes, Pipe())
+        print('Añadiendo un nuevo tubo!')
+        spawnTimer = 0
+    end
 
     bird:update(dt)
+
+    --por cada tubo en la escena...
+    for k, pipe in pairs(pipes) do
+        pipe:update(dt)
+
+        --si el tubo ya no se ve por estar a la izquierda de la pantalla, borrarlo
+        if pipe.x < - pipe.width then
+            table.remove(pipes, k)
+        end
+    end
 
     --reiniciar la tabla de inputs
     love.keyboard.keysPressed = {}
@@ -103,6 +130,11 @@ function love.draw()
 
     --comenzar a dibjar el fondo desde el punto de bucleado negativo
     love.graphics.draw(background, -backgroundScroll, 0)
+
+    --dibujar todos los tubos en nuestra escena
+    for k, pipe in pairs(pipes) do
+        pipe:render()
+    end
 
     --dibujar el piso sobre el fondo, hacia la parte de abajo de la pantalla
     -- en su punto de bucleado negativo
