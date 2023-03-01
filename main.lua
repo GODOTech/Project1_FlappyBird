@@ -9,6 +9,8 @@ require 'Bird'
 
 require 'Pipe'
 
+require 'PipePair'
+
 -- dimensiones de la pantalla fisica
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -30,15 +32,19 @@ local GROUND_SCROLL_SPEED = 60
 
 --punto en el cual debamos loopar el fondo de vuelta a X0
 local BACKGROUND_LOOPING_POINT = 413
+local GROUND_LOOPING_POINT = 514
+
 
 --The Bird is the word!
 local bird = Bird()
 
 --nuestra tabla de brotar tubos
-local pipes = {}
+local pipePairs = {}
 
 --nuestro timer para hacer aparecer los tubos
 local spawnTimer = 0
+
+local lastY = -PIPE_HEIGHT + math.random(80) + 20
 
 function love.load()
     --iniciar el filtro de vecino cercano
@@ -87,33 +93,51 @@ end
 function love.update(dt)
     --panear fondo por la velocidad * dt, bucleando a 0 despues del punto de bucle 
     backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt)
-        %BACKGROUND_LOOPING_POINT
+        % BACKGROUND_LOOPING_POINT
     
     --panear el suelo por la velocidad * dt, bucleando a 0 despues de el ancho de pantalla
     groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt)
-        % VIRTUAL_WIDTH
+        % GROUND_LOOPING_POINT
     
     spawnTimer = spawnTimer + dt
 
     --hacer aparecer un nuevo tubo si el timer se pasa de 2 segundos
     if spawnTimer > 2 then
-        table.insert(pipes, Pipe())
-        print('Añadiendo un nuevo tubo!')
+        --[[
+            modificar la  unltima coordenada que pusimos para que las aperturas
+            entre los tubos no esten demasiado lejos
+            no mas alto que 10 pixeles bajo el borde superior de la pantalla,
+            y no mas bajo que la longitud de la brecha (90 pix) de el fondo
+        ]]
+        local y  = math.max(-PIPE_HEIGHT + 10,
+            math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
+        lastY = y
+        
+        table.insert(pipePairs, PipePair(y))
+        print('Añadiendo un nuevo par de tubos!')
         spawnTimer = 0
     end
 
     bird:update(dt)
 
     --por cada tubo en la escena...
-    for k, pipe in pairs(pipes) do
-        pipe:update(dt)
-
-        --si el tubo ya no se ve por estar a la izquierda de la pantalla, borrarlo
-        if pipe.x < - pipe.width then
-            table.remove(pipes, k)
+    for k, pair in pairs(pipePairs) do
+        pair:update(dt)
+    end
+    
+    --[[
+        quitar los tubos marcados
+        necesitamos este segundo bucle porque modificar la tabla puesta sin claves
+        especificas resultaria en saltear el proximo tubo, devido a que, ya que 
+        todas las claves impicitas (indices numericos) son cambiadas despues de la
+        eliminacion de una tabla
+    ]]
+    for k, pair in ipairs(pipePairs) do
+        if pair.remove then
+            table.remove(pipePairs, k)
         end
     end
-
+    
     --reiniciar la tabla de inputs
     love.keyboard.keysPressed = {}
 end
@@ -121,10 +145,11 @@ end
 
 function love.draw()
     push:start()
-    --[[aca dibujamos nuestras imagenes corridas a la izquierda por su punto de bucle;
-    eventualmente se revierten de vuelta a 0 una vez pasada cierta distancia; dando la
-    sensacion de paneo infinito. elegir un punto de bucleado fluido es clave para generar
-    la ilusion de coutinuidad infinita 
+    --[[
+        aca dibujamos nuestras imagenes corridas a la izquierda por su punto de bucle;
+        eventualmente se revierten de vuelta a 0 una vez pasada cierta distancia; dando la
+        sensacion de paneo infinito. elegir un punto de bucleado fluido es clave para generar
+        la ilusion de coutinuidad infinita 
 
     ]]
 
@@ -132,8 +157,8 @@ function love.draw()
     love.graphics.draw(background, -backgroundScroll, 0)
 
     --dibujar todos los tubos en nuestra escena
-    for k, pipe in pairs(pipes) do
-        pipe:render()
+    for k, pair in pairs(pipePairs) do
+        pair:render()
     end
 
     --dibujar el piso sobre el fondo, hacia la parte de abajo de la pantalla
