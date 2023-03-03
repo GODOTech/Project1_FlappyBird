@@ -46,6 +46,8 @@ local spawnTimer = 0
 
 local lastY = -PIPE_HEIGHT + math.random(80) + 20
 
+local scrolling = true
+
 function love.load()
     --iniciar el filtro de vecino cercano
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -91,53 +93,68 @@ function love.keyboard.wasPressed(key)
 end
 
 function love.update(dt)
-    --panear fondo por la velocidad * dt, bucleando a 0 despues del punto de bucle 
-    backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt)
-        % BACKGROUND_LOOPING_POINT
+    if scrolling then    
+        --panear fondo por la velocidad * dt, bucleando a 0 despues del punto de bucle 
+        backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt)
+            % BACKGROUND_LOOPING_POINT
     
-    --panear el suelo por la velocidad * dt, bucleando a 0 despues de el ancho de pantalla
-    groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt)
-        % GROUND_LOOPING_POINT
+        --panear el suelo por la velocidad * dt, bucleando a 0 despues de el ancho de pantalla
+        groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt)
+            % GROUND_LOOPING_POINT
     
-    spawnTimer = spawnTimer + dt
-
-    --hacer aparecer un nuevo tubo si el timer se pasa de 2 segundos
-    if spawnTimer > 2 then
-        --[[
-            modificar la  unltima coordenada que pusimos para que las aperturas
-            entre los tubos no esten demasiado lejos
-            no mas alto que 10 pixeles bajo el borde superior de la pantalla,
-            y no mas bajo que la longitud de la brecha (90 pix) de el fondo
-        ]]
-        local y  = math.max(-PIPE_HEIGHT + 10,
-            math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
-        lastY = y
+        spawnTimer = spawnTimer + dt
+    
+        --hacer aparecer un nuevo tubo si el timer se pasa de 2 segundos
+        if spawnTimer > 2 then
+            --[[
+                modificar la  unltima coordenada que pusimos para que las aperturas
+                entre los tubos no esten demasiado lejos
+                no mas alto que 10 pixeles bajo el borde superior de la pantalla,
+                y no mas bajo que la longitud de la brecha (90 pix) de el fondo
+            ]]
+            local y  = math.max(-PIPE_HEIGHT + 10,
+                math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
+            lastY = y
         
-        table.insert(pipePairs, PipePair(y))
-        print('Añadiendo un nuevo par de tubos!')
-        spawnTimer = 0
-    end
+            table.insert(pipePairs, PipePair(y))
+            print('Añadiendo un nuevo par de tubos!')
+            spawnTimer = 0
+        end
 
-    bird:update(dt)
+        bird:update(dt)
 
-    --por cada tubo en la escena...
-    for k, pair in pairs(pipePairs) do
-        pair:update(dt)
-    end
-    
-    --[[
-        quitar los tubos marcados
-        necesitamos este segundo bucle porque modificar la tabla puesta sin claves
-        especificas resultaria en saltear el proximo tubo, devido a que, ya que 
-        todas las claves impicitas (indices numericos) son cambiadas despues de la
-        eliminacion de una tabla
-    ]]
-    for k, pair in ipairs(pipePairs) do
-        if pair.remove then
-            table.remove(pipePairs, k)
+        --por cada tubo en la escena...
+        for k, pair in pairs(pipePairs) do
+            pair:update(dt)
+
+            --checkear si el pajaro colisono con algun tubo
+            for l, pipe in pairs(pair.pipes) do
+                if bird:collides(pipe) then
+                    --pausar el juego para probar la colision
+                    scrolling = false
+                end
+            end
+
+            --si el tubo ya no es visible pasando el borde izquierdo quitarlo de la escena
+            if pair.x < -PIPE_WIDTH then
+                pair.remove = true                
+            end
+        end
+
+        --[[
+            quitar los tubos marcados
+            necesitamos este segundo bucle porque modificar la tabla puesta sin claves
+            especificas resultaria en saltear el proximo tubo, devido a que, ya que 
+            todas las claves impicitas (indices numericos) son cambiadas despues de la
+            eliminacion de una tabla
+        ]]
+        for k, pair in pairs(pipePairs) do
+            if pair.remove then
+                table.remove(pipePairs, k)
+            end
         end
     end
-    
+
     --reiniciar la tabla de inputs
     love.keyboard.keysPressed = {}
 end
