@@ -17,6 +17,8 @@
 
     --si este par de tubos esta listo para ser removido de la escena
     self.remove = false
+
+    self.scored = false
  end
 
  function PipePair:update(dt)

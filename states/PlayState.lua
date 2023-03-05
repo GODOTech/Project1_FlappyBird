@@ -19,8 +19,10 @@ function PlayState:init()
     self.pipePairs = {}
     self.timer = 0
 
+    self.score = 0
+
     --inicializar nuestra coordenada Y grabada para basar las demas brechas
-    self.lastY = -PIPE_HEIGHT + math.random(80) + 20    
+    self.lastY = -PIPE_HEIGHT + math.random(80) + 20
 end
 
 function PlayState:update(dt)
@@ -44,7 +46,15 @@ function PlayState:update(dt)
 
     --Para cada par de tubos...
     for k, pair in pairs(self.pipePairs) do
-        -- actualizar posicion de 'pair'
+        --marcar un punto si el tubo ha pasado del pajaro a la izquierda
+        --e ignorarlo si ya ha sido marcado
+        if not pair.scored then
+            if pair.x + PIPE_WIDTH < self.bird.x then
+                self.score = self.score + 1
+                pair.scored = true
+            end
+        end
+        --actualizar Posicion del par
         pair:update(dt)
     end
     
@@ -65,13 +75,17 @@ function PlayState:update(dt)
     for k, pair in pairs(self.pipePairs) do
         for l, pipe in pairs(pair.pipes) do
             if self.bird:collides(pipe) then
-                gStateMachine:change('title')
+                gStateMachine:change('score',{
+                    score = self.score
+                })
             end
         end
     end
     -- resetear si caemos al piso
     if self.bird.y > VIRTUAL_HEIGHT -15 then
-        gStateMachine:change('title')
+        gStateMachine:change('score', {
+            score = self.score
+        })
     end
 end
 
@@ -79,6 +93,8 @@ function PlayState:render()
     for k, pair in pairs(self.pipePairs) do
         pair:render()
     end
-    
+    love.graphics.setFont(flappyFont)
+    love.graphics.print('Score: ' .. tostring(self.score), 8, 8)
+
     self.bird:render()
 end

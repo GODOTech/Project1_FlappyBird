@@ -15,6 +15,7 @@ require 'PipePair'
 require 'StateMachine'
 require 'states/BaseState'
 require 'states/PlayState'
+require 'states/ScoreState'
 require 'states/TitleScreenState'
 
 -- dimensiones de la pantalla fisica
@@ -81,12 +82,13 @@ love.graphics.setFont(flappyFont)
     --inicializar la maquina de estados con todas las funciones que devuelven estados
     gStateMachine = StateMachine {
         ['title'] = function () return TitleScreenState() end,
-        ['play'] = function () return PlayState() end
+        ['play'] = function () return PlayState() end,
+        ['score'] = function() return ScoreState() end
     }
     gStateMachine:change('title')
 
     --inicializar la tabla de inputs
-    love.keyboard.keysPressed = {} 
+    love.keyboard.keysPressed = {}
 end
 
 function love.resize(w, h)
