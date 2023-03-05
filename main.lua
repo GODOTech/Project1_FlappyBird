@@ -11,6 +11,12 @@ require 'Pipe'
 
 require 'PipePair'
 
+--todo el codigo relacionado con el estado de juego y la maquina de estados
+require 'StateMachine'
+require 'states/BaseState'
+require 'states/PlayState'
+require 'states/TitleScreenState'
+
 -- dimensiones de la pantalla fisica
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -34,7 +40,7 @@ local GROUND_SCROLL_SPEED = 60
 local BACKGROUND_LOOPING_POINT = 413
 local GROUND_LOOPING_POINT = 514
 
-
+--[[
 --The Bird is the word!
 local bird = Bird()
 
@@ -45,6 +51,7 @@ local pipePairs = {}
 local spawnTimer = 0
 
 local lastY = -PIPE_HEIGHT + math.random(80) + 20
+]]
 
 local scrolling = true
 
@@ -55,12 +62,28 @@ function love.load()
     -- titulo de la ventana
     love.window.setTitle('Flipin` Bird')
     
+--inicializar nuestra fuente retro
+smallFont = love.graphics.newFont('font.ttf', 8)
+mediumFont = love.graphics.newFont('flappy.ttf', 14)
+flappyFont = love.graphics.newFont('flappy.ttf', 28)
+hugeFont = love.graphics.newFont('flappy.ttf', 56)
+love.graphics.setFont(flappyFont)
+
+
     --iniciar resolucion virtual
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
         vsync = true,
         fullscreen = false,
         resizable = true
     })
+
+
+    --inicializar la maquina de estados con todas las funciones que devuelven estados
+    gStateMachine = StateMachine {
+        ['title'] = function () return TitleScreenState() end,
+        ['play'] = function () return PlayState() end
+    }
+    gStateMachine:change('title')
 
     --inicializar la tabla de inputs
     love.keyboard.keysPressed = {} 
@@ -93,67 +116,15 @@ function love.keyboard.wasPressed(key)
 end
 
 function love.update(dt)
-    if scrolling then    
-        --panear fondo por la velocidad * dt, bucleando a 0 despues del punto de bucle 
-        backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt)
-            % BACKGROUND_LOOPING_POINT
     
-        --panear el suelo por la velocidad * dt, bucleando a 0 despues de el ancho de pantalla
-        groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt)
-            % GROUND_LOOPING_POINT
+    --panear fondo por la velocidad * dt, bucleando a 0 despues del punto de bucle 
+    backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
     
-        spawnTimer = spawnTimer + dt
+    --panear el suelo por la velocidad * dt, bucleando a 0 despues de el ancho de pantalla
+    groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
     
-        --hacer aparecer un nuevo tubo si el timer se pasa de 2 segundos
-        if spawnTimer > 2 then
-            --[[
-                modificar la  unltima coordenada que pusimos para que las aperturas
-                entre los tubos no esten demasiado lejos
-                no mas alto que 10 pixeles bajo el borde superior de la pantalla,
-                y no mas bajo que la longitud de la brecha (90 pix) de el fondo
-            ]]
-            local y  = math.max(-PIPE_HEIGHT + 10,
-                math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
-            lastY = y
-        
-            table.insert(pipePairs, PipePair(y))
-            print('Añadiendo un nuevo par de tubos!')
-            spawnTimer = 0
-        end
-
-        bird:update(dt)
-
-        --por cada tubo en la escena...
-        for k, pair in pairs(pipePairs) do
-            pair:update(dt)
-
-            --checkear si el pajaro colisono con algun tubo
-            for l, pipe in pairs(pair.pipes) do
-                if bird:collides(pipe) then
-                    --pausar el juego para probar la colision
-                    scrolling = false
-                end
-            end
-
-            --si el tubo ya no es visible pasando el borde izquierdo quitarlo de la escena
-            if pair.x < -PIPE_WIDTH then
-                pair.remove = true                
-            end
-        end
-
-        --[[
-            quitar los tubos marcados
-            necesitamos este segundo bucle porque modificar la tabla puesta sin claves
-            especificas resultaria en saltear el proximo tubo, devido a que, ya que 
-            todas las claves impicitas (indices numericos) son cambiadas despues de la
-            eliminacion de una tabla
-        ]]
-        for k, pair in pairs(pipePairs) do
-            if pair.remove then
-                table.remove(pipePairs, k)
-            end
-        end
-    end
+    --ahora actualizamos la maquina de estados, que deriva al estado correcto
+    gStateMachine:update(dt)
 
     --reiniciar la tabla de inputs
     love.keyboard.keysPressed = {}
@@ -162,27 +133,12 @@ end
 
 function love.draw()
     push:start()
-    --[[
-        aca dibujamos nuestras imagenes corridas a la izquierda por su punto de bucle;
-        eventualmente se revierten de vuelta a 0 una vez pasada cierta distancia; dando la
-        sensacion de paneo infinito. elegir un punto de bucleado fluido es clave para generar
-        la ilusion de coutinuidad infinita 
-
-    ]]
-
-    --comenzar a dibjar el fondo desde el punto de bucleado negativo
+    
+    --dibujar la maquina de estados entre el fondo y el piso,
+    --que deriva la logica al estado activo
     love.graphics.draw(background, -backgroundScroll, 0)
-
-    --dibujar todos los tubos en nuestra escena
-    for k, pair in pairs(pipePairs) do
-        pair:render()
-    end
-
-    --dibujar el piso sobre el fondo, hacia la parte de abajo de la pantalla
-    -- en su punto de bucleado negativo
+    gStateMachine:render()
     love.graphics.draw(ground, -groundScroll, VIRTUAL_HEIGHT - 16)
-
-    bird:render()
 
     push:finish()
 end
