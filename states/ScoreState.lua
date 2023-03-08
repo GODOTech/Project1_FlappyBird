@@ -10,7 +10,7 @@ end
 function ScoreState:update(dt)
     -- volver a play si se presiona enter
     if love.keyboard.wasPressed('enter') or love.keyboard.wasPressed('return') then
-        gStateMachine:change('play')
+        gStateMachine:change('countdown')
     end
 end
 

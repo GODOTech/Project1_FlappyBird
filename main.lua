@@ -14,6 +14,7 @@ require 'PipePair'
 --todo el codigo relacionado con el estado de juego y la maquina de estados
 require 'StateMachine'
 require 'states/BaseState'
+require 'states/CountdownState'
 require 'states/PlayState'
 require 'states/ScoreState'
 require 'states/TitleScreenState'
@@ -82,6 +83,7 @@ love.graphics.setFont(flappyFont)
     --inicializar la maquina de estados con todas las funciones que devuelven estados
     gStateMachine = StateMachine {
         ['title'] = function () return TitleScreenState() end,
+        ['countdown'] = function() return CountdownState() end,
         ['play'] = function () return PlayState() end,
         ['score'] = function() return ScoreState() end
     }
