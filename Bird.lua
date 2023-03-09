@@ -42,6 +42,7 @@ function Bird:update(dt)
     -- añadir una subita rafaga de gravedad negativa si tocamos espacio
     if love.keyboard.wasPressed('space') then
         self.dy = -5
+        sounds['jump']:play()
     end
 
     --aplicar la velocidad actual a la poscicion Y

@@ -13,11 +13,17 @@ require 'PipePair'
 
 --todo el codigo relacionado con el estado de juego y la maquina de estados
 require 'StateMachine'
+
 require 'states/BaseState'
 require 'states/CountdownState'
 require 'states/PlayState'
 require 'states/ScoreState'
 require 'states/TitleScreenState'
+
+require 'Bird'
+require 'Pipe'
+require 'PipePair'
+
 
 -- dimensiones de la pantalla fisica
 WINDOW_WIDTH = 1280
@@ -71,6 +77,19 @@ flappyFont = love.graphics.newFont('flappy.ttf', 28)
 hugeFont = love.graphics.newFont('flappy.ttf', 56)
 love.graphics.setFont(flappyFont)
 
+--Inicializar  nuestra tabla de sonidos
+sounds = {
+    ['jump'] = love.audio.newSource('jump.wav', 'static'),
+    ['explosion'] = love.audio.newSource('explosion.wav', 'static'),
+    ['hurt'] = love.audio.newSource('hurt.wav', 'static'),
+    ['score'] = love.audio.newSource('score.wav', 'static'),
+
+    ['music'] = love.audio.newSource('marios_way.mp3', 'static')
+}
+
+--Arrancar la musica!
+sounds['music']:setLooping(true)
+sounds['music']:play()
 
     --iniciar resolucion virtual
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
